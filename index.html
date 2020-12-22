@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ClickTrade - ETF lookup</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<style>
+	    body {
+	        font-family: 'Lucida Grande', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            font-size: 13px;
+            padding: 0;
+            margin: 0;
+	    }
+	    .header {
+	        text-align: center;
+	    }
+	    .header input[type="text"] {
+            width: 20%;
+            height: 3em;
+	    }
+	    .results-container {
+	        padding: 10px;
+	        display: flex;
+            flex-direction: column;
+            align-items: center;
+	    }
+	    .result {
+            border: 1px solid #bfbbbb;
+            padding: 5px;
+            min-width: 38%;
+	    }
+	    .result:hover {
+	        background: #8080800a;
+	    }
+	</style>
+</head>
+<body>
+    <div class="header">
+        <h1>ClickTrade - ETF lookup</h1>
+        <input type="text" id="query" placeholder="Search" autocomplete="off">
+        <div id="currencies">
+            
+        </div>
+    </div>
+    <div id="results" class="results-container">
+    </div>
+    
+    <script type="text/template" id="tpl-currency">
+        <label><input type="checkbox" name="currency" value="<%= currency %>"> <%= currency %></label>
+    </script>
+    <script type="text/template" id="tpl-result">
+        <div class="result">
+            <h3><%= entry.Description %></h3>
+            <a href="https://es.tradingview.com/symbols/<%= entry.parsedSymbol %>/" title="Symbol" target="_blank"><%= entry.Symbol %></a> - <%= entry.CurrencyCode %> - <%= entry.ExchangeCountry %>
+        </div>
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/underscore@1.11.0/underscore-min.js"></script>
+    <script src="js/peque.js"></script>
+    <script>
+        window.peque = new Peque();
+        
+        class ClickTrade {
+            constructor () {
+                this.$query = document.getElementById("query");
+                this.$results = document.getElementById("results");
+                this.appliedCurrencies = [];
+                
+                this.$query.addEventListener("input", () => {
+                    const query = this.$query.value.toLowerCase().trim();
+                    
+                    if (query.length < 1) {
+                        return;
+                    }
+                    
+                    this.search(query);
+                });
+
+                this.getEtfs()
+                    .then(() => {
+                        return this.getCurrencies();
+                    })
+                    .then(() => {
+                    // once db is loaded, recover current search
+                    const url = new URL(location.href);
+                    const query = url.searchParams.get('q');
+                    const currencies = url.searchParams.get('currencies');
+                    
+                    if (currencies) {
+                        this.appliedCurrencies = currencies.split(",");
+                        
+                        this.appliedCurrencies.forEach((entry) => {
+                            document.querySelector('[value="' + entry + '"]').checked = true;
+                        });
+                    }
+                    
+                    if (query) {
+                        this.$query.value = query;
+                        this.search(query);
+                    }
+                });
+            }
+            
+            getEtfs () {
+                return fetch("etfs.json")
+                    .then(response => response.json())
+                    .then(response => {
+                        this.etfs = response.Data;
+                });
+            }
+            
+            getCurrencies () {
+                return new Promise((resolve, reject) => {
+                    const total = this.etfs.length - 1;
+                    let currencies = [];
+
+                    this.etfs.forEach((entry, i) => {
+                        if (!currencies.includes(entry.CurrencyCode)) {
+                            currencies.push(entry.CurrencyCode);
+                        }
+
+                        // once we've got all currencies, render them
+                        if (total == i) {
+                            this.renderCurrencies(currencies, resolve);
+                        }
+                    });
+                });
+            }
+            
+            renderCurrencies (currencies, resolve) {
+                const $currencies = document.getElementById("currencies");
+                const total = currencies.length - 1;
+
+                currencies.forEach((currency, i) => {
+                    const $entry = peque.parseTemplate("currency", {currency});
+                    
+                    $entry.querySelector('input').addEventListener("click", (e) => {
+                        this.toggleCurrency(currency);
+                    });
+                    
+                    $currencies.appendChild($entry);
+                    
+                    if (total == i) {
+                        resolve();
+                    }
+                });
+            }
+            
+            toggleCurrency (currency) {
+                if (this.appliedCurrencies.includes(currency)) {
+                    this.appliedCurrencies.splice(this.appliedCurrencies.indexOf(currency), 1);
+                } else {
+                    this.appliedCurrencies.push(currency);
+                }
+                
+                this.reload();
+            }
+            
+            reload () {
+                this.search(this.$query.value);
+            }
+            
+            search (query) {
+                this.$results.innerHTML = ''; // reset shown results
+                    
+                this.etfs.forEach(entry => {
+                    if (this.appliedCurrencies.length > 0 && !this.appliedCurrencies.includes(entry.CurrencyCode)) {
+                        return;
+                    }
+                    if (entry.Description.toLowerCase().includes(query) || entry.Symbol.toLowerCase().includes(query)) {
+                        // make symbol compatible with trandingview
+                        entry.parsedSymbol = entry.Symbol.toUpperCase().split(":");
+                        entry.parsedSymbol = entry.parsedSymbol[1] + "-" + entry.parsedSymbol[0];
+                        
+                        const $entry = peque.parseTemplate("result", {entry});
+                        this.$results.appendChild($entry);
+                    }
+                });
+                
+                // update top url
+                const params = new URLSearchParams();
+                
+                if (query.length > 0) {
+                    params.append("q", query);
+                }
+                if (this.appliedCurrencies.length > 0) {
+                    params.append("currencies", this.appliedCurrencies);
+                }
+                window.history.pushState('', '', '?' + params.toString());
+            }
+        }
+        
+        const clickTrade = new ClickTrade();
+    </script>
+</body>
+</html>
