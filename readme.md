@@ -4,3 +4,4 @@
 
 Small tool to lookup for ClickTrade.es ETFs, since their webapp sucks.
 
+## [Use it](https://tetreum.github.io/clicktrade-etf/index.html)
