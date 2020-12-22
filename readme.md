@@ -1,4 +1,4 @@
-![Preview](https://github.com/tetreum/clicktrade-etf/blob/master/docs/preview.png?raw=true)
+![Preview](https://github.com/tetreum/clicktrade-etf/blob/master/preview.png?raw=true)
 
 # ClickTrade.es ETF Lookup
 
