@@ -3,7 +3,7 @@
 <head>
     <title>ClickTrade - ETF lookup</title>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
 	<style>
 	    body {
 	        font-family: 'Lucida Grande', 'Helvetica Neue', Helvetica, Arial, sans-serif;
@@ -51,7 +51,7 @@
     <script type="text/template" id="tpl-result">
         <div class="result">
             <h3><%= entry.Description %></h3>
-            <a href="https://es.tradingview.com/symbols/<%= entry.parsedSymbol %>/" title="Symbol" target="_blank"><%= entry.Symbol %></a> - <%= entry.CurrencyCode %> - <%= entry.ExchangeCountry %>
+            <a href="https://es.tradingview.com/symbols/<%= entry.parsedSymbol %>/" title="Symbol" target="_blank"><%= entry.Symbol %></a> - <a href="https://es.investing.com/search/?tab=quotes&q=<%= entry.TrueSymbol %>" title="Search on Investing.com"  target="_blank">Investing</a> - <%= entry.CurrencyCode %> - <%= entry.ExchangeCountry %>
         </div>
     </script>
     <script src="https://cdn.jsdelivr.net/npm/underscore@1.11.0/underscore-min.js"></script>
@@ -169,6 +169,7 @@
                     if (entry.Description.toLowerCase().includes(query) || entry.Symbol.toLowerCase().includes(query)) {
                         // make symbol compatible with trandingview
                         entry.parsedSymbol = entry.Symbol.toUpperCase().split(":");
+                        entry.TrueSymbol = entry.parsedSymbol[0];
                         entry.parsedSymbol = entry.parsedSymbol[1] + "-" + entry.parsedSymbol[0];
                         
                         const $entry = peque.parseTemplate("result", {entry});
